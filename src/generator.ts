@@ -429,10 +429,11 @@ export function generatePackageJson(appName: string) {
         preview: 'vite preview',
       },
       dependencies: {
-        '@grafana/data': '^10.4.0',
-        '@grafana/runtime': '^10.4.0',
-        '@grafana/scenes': '^5.0.0',
-        '@grafana/ui': '^10.4.0',
+        '@grafana/data': '^11.3.0',
+        '@grafana/runtime': '^11.3.0',
+        '@grafana/schema': '^11.3.0',
+        '@grafana/ui': '^11.3.0',
+        '@grafana/scenes': '^5.21.0',
         react: '^18.2.0',
         'react-dom': '^18.2.0',
       },
@@ -477,6 +478,15 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: [
+      '@grafana/scenes',
+      '@grafana/schema',
+      '@grafana/data',
+      '@grafana/ui',
+      '@grafana/runtime',
+    ],
+  },
 });
 `;
 }
