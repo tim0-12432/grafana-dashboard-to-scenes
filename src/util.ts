@@ -26,3 +26,8 @@ export function pascalCase(str: string) {
 export function jsLiteral(value: unknown, indent: number = 2) {
   return JSON.stringify(value, null, indent);
 }
+
+export function toPluginIdFromAppName(name: string) {
+  const safe = name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return `${safe || 'myorg'}-app`;
+}

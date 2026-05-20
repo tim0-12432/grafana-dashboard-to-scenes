@@ -5,14 +5,18 @@ import { listDashboardFiles, parseDashboardFile } from './parser.js';
 import {
   generateSceneFile,
   generateAppFile,
-  generateReactEntry,
-  generateMainTsx,
-  generateIndexHtml,
   generatePackageJson,
   generateTsConfig,
-  generateViteConfig,
+  generateDockerCompose,
+  generateLogoSvg,
+  generateModuleTsx,
+  generatePluginJson,
+  generateWebpackConfig,
+  generateWebpackConstants,
+  generatePluginsYaml,
 } from './generator.js';
 import type { DashboardFile } from './types.js';
+import { toPluginIdFromAppName } from './util.js';
 
 export async function generateScenesApp({ inputDir, outputDir, appName, recursive }: { inputDir: string, outputDir: string, appName: string, recursive: boolean }) {
   const stat = await fs.stat(inputDir).catch(() => null);
@@ -66,30 +70,65 @@ export async function generateScenesApp({ inputDir, outputDir, appName, recursiv
     await fs.writeFile(filePath, generateSceneFile(d));
   }
 
-  // App + React + project files
+  // Plugin entry + manifest
   await fs.writeFile(path.join(outputDir, 'src', 'sceneApp.ts'), generateAppFile(dashboards));
-  await fs.writeFile(path.join(outputDir, 'src', 'App.tsx'), generateReactEntry(appName, dashboards));
-  await fs.writeFile(path.join(outputDir, 'src', 'main.tsx'), generateMainTsx());
-  await fs.writeFile(path.join(outputDir, 'index.html'), generateIndexHtml(appName));
+  await fs.writeFile(path.join(outputDir, 'src', 'module.tsx'), generateModuleTsx());
+  await fs.writeFile(path.join(outputDir, 'src', 'plugin.json'), generatePluginJson(appName, dashboards));
+
+  // Logo placeholder
+  await fs.ensureDir(path.join(outputDir, 'src', 'img'));
+  await fs.writeFile(path.join(outputDir, 'src', 'img', 'logo.svg'), generateLogoSvg());
+
+  // Project tooling
   await fs.writeFile(path.join(outputDir, 'package.json'), generatePackageJson(appName));
   await fs.writeFile(path.join(outputDir, 'tsconfig.json'), generateTsConfig());
-  await fs.writeFile(path.join(outputDir, 'vite.config.ts'), generateViteConfig());
+
+  // Webpack config under .config/webpack/
+  await fs.ensureDir(path.join(outputDir, '.config', 'webpack'));
+  await fs.writeFile(path.join(outputDir, '.config', 'webpack', 'webpack.config.ts'), generateWebpackConfig());
+  await fs.writeFile(path.join(outputDir, '.config', 'webpack', 'constants.js'), generateWebpackConstants());
+
+  // Local Grafana via docker-compose
+  await fs.writeFile(path.join(outputDir, 'docker-compose.yaml'), generateDockerCompose(appName));
+  await fs.writeFile(path.join(outputDir, 'provisioning', 'plugins', 'plugins.yaml'), generatePluginsYaml(appName));
+
+  // README with instructions
   await fs.writeFile(
     path.join(outputDir, 'README.md'),
     `# ${appName}
 
-Auto-generated Grafana Scenes app from a directory of dashboards.
+Auto-generated **Grafana App Plugin** from a directory of dashboards.
 
 ## Dashboards included
 
 ${dashboards.map((d) => `- **${d.title}** (\`${d.slug}\`) — ${d.panels.length} panels`).join('\n')}
 
-## Setup
+## Build
 
 \`\`\`bash
 npm install
-npm run dev
+npm run build
 \`\`\`
+
+Output goes into \`./dist\`.
+
+## Run locally (Docker)
+
+\`\`\`bash
+npm run server
+\`\`\`
+
+Then open http://localhost:3000 → Administration → Plugins → enable the app.
+
+## Install in an existing Grafana
+
+1. Copy \`./dist\` to \`<grafana-data-dir>/plugins/${toPluginIdFromAppName(appName)}/\`
+2. Allow unsigned in \`grafana.ini\`:
+   \`\`\`ini
+   [plugins]
+   allow_loading_unsigned_plugins = ${toPluginIdFromAppName(appName)}
+   \`\`\`
+3. Restart Grafana, then enable the plugin in the UI.
 `
   );
 

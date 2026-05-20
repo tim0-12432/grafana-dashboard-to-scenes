@@ -30,7 +30,7 @@ program
       );
       console.log(
         chalk.yellow(
-          `\nNext steps:\n  cd ${options.output}\n  npm install\n  npm run dev`
+          `\nNext steps:\n  cd ${options.output}\n  npm install\n  npm run build\n  npm run server   # launches Grafana in Docker with the plugin loaded`
         )
       );
     } catch (err: any) {

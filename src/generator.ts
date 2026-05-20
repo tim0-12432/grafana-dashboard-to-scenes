@@ -323,9 +323,7 @@ export function generateAppFile(dashboards: DashboardFile[]) {
   const imports = dashboards
     .map(
       (d) =>
-        `import { getScene as get_${toIdent(d.slug)}, meta as meta_${toIdent(
-          d.slug
-        )} } from './dashboards/${d.slug}';`
+        `import { getScene as get_${toIdent(d.slug)}, meta as meta_${toIdent(d.slug)} } from './dashboards/${d.slug}';`
     )
     .join('\n');
 
@@ -333,100 +331,149 @@ export function generateAppFile(dashboards: DashboardFile[]) {
     .map(
       (d) => `    new SceneAppPage({
       title: meta_${toIdent(d.slug)}.title,
-      subTitle: meta_${toIdent(d.slug)}.description,
-      url: \`/a/\${meta_${toIdent(d.slug)}.slug}\`,
-      hideFromBreadcrumbs: false,
+      url: \`/a/\${PLUGIN_ID}/${d.slug}\`,
+      routePath: \`/a/\${PLUGIN_ID}/${d.slug}\`,
       getScene: () => get_${toIdent(d.slug)}(),
     })`
     )
     .join(',\n');
 
-  return `// AUTO-GENERATED app entry
+  const firstSlug = dashboards[0]?.slug;
+
+  return `import { SceneApp, SceneAppPage } from '@grafana/scenes';
 ${imports}
 
-import { SceneApp, SceneAppPage } from '@grafana/scenes';
+import pluginJson from './plugin.json';
+const PLUGIN_ID = pluginJson.id;
+
+let app: SceneApp | undefined;
 
 export function getSceneApp() {
-  return new SceneApp({
-    pages: [
-${pages}
-    ],
-  });
+  if (!app) {
+    app = new SceneApp({
+      pages: [
+        ${pages},
+        new SceneAppPage({
+          title: 'Home',
+          url: \`/a/\${PLUGIN_ID}\`,
+          routePath: \`/a/\${PLUGIN_ID}\`,
+          getScene: () => get_${toIdent(firstSlug)}(),
+        }),
+      ],
+    });
+  }
+  return app;
 }
 `;
 }
 
 /* ------------------------------------------------------------------ */
-/*  React entry                                                       */
+/*  Grafana App Plugin entry — module.tsx                             */
 /* ------------------------------------------------------------------ */
 
-export function generateReactEntry(appName: string, dashboards: DashboardFile[]) {
-  const navLinks = dashboards
-    .map(
-      (d) =>
-        `        <a href={\`#/a/${d.slug}\`} style={{ marginRight: 12 }}>${d.title.replace(/</g, '&lt;')}</a>`
-    )
-    .join('\n');
-
+export function generateModuleTsx() {
   return `import React from 'react';
+import { AppPlugin, type AppRootProps } from '@grafana/data';
 import { getSceneApp } from './sceneApp';
 
-export const App = () => {
+const RootPage = (_props: AppRootProps) => {
   const app = getSceneApp();
-  return (
-    <div style={{ padding: 16 }}>
-      <h1>${appName}</h1>
-      <nav style={{ marginBottom: 16 }}>
-${navLinks}
-      </nav>
-      <app.Component model={app} />
-    </div>
-  );
+  // SceneApp is itself a SceneObject — render via its Component
+  return <app.Component model={app} />;
 };
 
-export default App;
+export const plugin = new AppPlugin<{}>().setRootPage(RootPage);
 `;
 }
 
-export function generateMainTsx() {
-  return `import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
+/* ------------------------------------------------------------------ */
+/*  plugin.json manifest                                              */
+/* ------------------------------------------------------------------ */
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-`;
-}
+export function generatePluginJson(appName: string, dashboards: DashboardFile[]) {
+  const pluginId = toPluginId(appName);
+  const today = new Date().toISOString().slice(0, 10);
 
-export function generateIndexHtml(appName: string) {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>${appName}</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-`;
-}
+  // One nav entry per dashboard so they appear in the left-nav of the app
+  const includes = [
+    {
+      type: 'page',
+      name: 'Home',
+      path: `/a/${pluginId}`,
+      role: 'Viewer',
+      addToNav: true,
+      defaultNav: true,
+    },
+    ...dashboards.map((d) => ({
+      type: 'page',
+      name: d.title,
+      path: `/a/${pluginId}/${d.slug}`,
+      role: 'Viewer',
+      addToNav: true,
+    })),
+  ];
 
-export function generatePackageJson(appName: string) {
   return JSON.stringify(
     {
+      $schema: 'https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json',
+      type: 'app',
       name: appName,
-      version: '0.1.0',
+      id: pluginId,
+      info: {
+        keywords: ['scenes', 'dashboards'],
+        description: 'Auto-generated Grafana Scenes app',
+        author: { name: 'dashboards-to-scenes' },
+        logos: {
+          small: 'img/logo.svg',
+          large: 'img/logo.svg',
+        },
+        screenshots: [],
+        version: '1.0.0',
+        updated: today,
+      },
+      dependencies: {
+        grafanaDependency: '>=10.4.0',
+        plugins: [],
+      },
+      includes,
+    },
+    null,
+    2
+  );
+}
+
+function toPluginId(appName: string) {
+  // Grafana plugin ids must look like `<org>-<name>-app`
+  const safe = appName.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return `${safe || 'myorg'}-app`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Logo placeholder                                                  */
+/* ------------------------------------------------------------------ */
+
+export function generateLogoSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  package.json — uses @grafana/create-plugin tooling                */
+/* ------------------------------------------------------------------ */
+
+export function generatePackageJson(appName: string) {
+  const pluginId = toPluginId(appName);
+  return JSON.stringify(
+    {
+      name: pluginId,
+      version: '1.0.0',
+      description: 'Auto-generated Grafana Scenes app plugin',
       private: true,
-      type: 'module',
       scripts: {
-        dev: 'vite',
-        build: 'vite build',
-        preview: 'vite preview',
+        build: 'webpack -c ./.config/webpack/webpack.config.ts --env production',
+        dev: 'webpack -w -c ./.config/webpack/webpack.config.ts --env development',
+        typecheck: 'tsc --noEmit',
+        server: 'docker-compose up --build',
       },
       dependencies: {
         '@grafana/data': '^11.3.0',
@@ -436,13 +483,24 @@ export function generatePackageJson(appName: string) {
         '@grafana/scenes': '^5.21.0',
         react: '^18.2.0',
         'react-dom': '^18.2.0',
+        tslib: '^2.6.0',
       },
       devDependencies: {
+        '@swc/core': '^1.4.0',
+        '@swc/helpers': '^0.5.0',
+        '@types/node': '^20.10.0',
         '@types/react': '^18.2.0',
         '@types/react-dom': '^18.2.0',
-        '@vitejs/plugin-react': '^4.2.0',
+        '@types/webpack-livereload-plugin': '^2.3.6',
+        'copy-webpack-plugin': '^12.0.0',
+        'fork-ts-checker-webpack-plugin': '^9.0.0',
+        'swc-loader': '^0.2.6',
+        'terser-webpack-plugin': '^5.3.10',
+        'ts-node': '^10.9.2',
         typescript: '^5.3.0',
-        vite: '^5.0.0',
+        webpack: '^5.90.0',
+        'webpack-cli': '^5.1.4',
+        'webpack-livereload-plugin': '^3.0.2',
       },
     },
     null,
@@ -450,43 +508,171 @@ export function generatePackageJson(appName: string) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  tsconfig.json                                                     */
+/* ------------------------------------------------------------------ */
+
 export function generateTsConfig() {
   return JSON.stringify(
     {
       compilerOptions: {
-        target: 'ES2020',
-        module: 'ESNext',
-        moduleResolution: 'bundler',
-        jsx: 'react-jsx',
+        target: 'es2020',
+        module: 'commonjs',
+        moduleResolution: 'nodenext',
+        jsx: 'react',
         strict: false,
         esModuleInterop: true,
         skipLibCheck: true,
         resolveJsonModule: true,
         allowSyntheticDefaultImports: true,
         isolatedModules: true,
+        forceConsistentCasingInFileNames: true,
+        declaration: false,
+        sourceMap: true,
+        noEmit: true,
+        outDir: './dist',
+        rootDir: './src',
+        baseUrl: './src',
       },
-      include: ['src'],
+      include: ['src', '.config'],
     },
     null,
     2
   );
 }
 
-export function generateViteConfig() {
-  return `import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+/* ------------------------------------------------------------------ */
+/*  Webpack config (Grafana plugin standard)                          */
+/* ------------------------------------------------------------------ */
 
-export default defineConfig({
-  plugins: [react()],
-  optimizeDeps: {
-    include: [
-      '@grafana/scenes',
-      '@grafana/schema',
+export function generateWebpackConfig() {
+  return `import path from 'path';
+import { Configuration } from 'webpack';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
+import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
+import LiveReloadPlugin from 'webpack-livereload-plugin';
+import TerserPlugin from 'terser-webpack-plugin';
+import { DIST_DIR, SOURCE_DIR } from './constants.js';
+
+const config = async (env: Record<string, unknown>): Promise<Configuration> => {
+  const isProduction = env.production === true;
+  return {
+    cache: { type: 'filesystem', buildDependencies: { config: [__filename] } },
+    context: path.join(process.cwd(), SOURCE_DIR),
+    devtool: isProduction ? 'source-map' : 'eval-source-map',
+    entry: { module: \`./module.tsx\` },
+    externals: [
+      'react',
+      'react-dom',
+      'react-router-dom',
       '@grafana/data',
-      '@grafana/ui',
       '@grafana/runtime',
+      '@grafana/ui',
     ],
-  },
-});
+    mode: isProduction ? 'production' : 'development',
+    module: {
+      rules: [
+        {
+          test: /\\.[tj]sx?$/,
+          exclude: /node_modules/,
+          use: {
+            loader: 'swc-loader',
+            options: {
+              jsc: {
+                baseUrl: path.resolve(process.cwd(), SOURCE_DIR),
+                target: 'es2015',
+                loose: false,
+                parser: { syntax: 'typescript', tsx: true, decorators: false, dynamicImport: true },
+              },
+            },
+          },
+        },
+        { test: /\\.css$/, use: ['style-loader', 'css-loader'] },
+        { test: /\\.s[ac]ss$/, use: ['style-loader', 'css-loader', 'sass-loader'] },
+        { test: /\\.(png|jpe?g|gif|svg)$/, type: 'asset/resource' },
+      ],
+    },
+    output: {
+      clean: { keep: new RegExp('.*?_amd64|.*?_arm64|.*?_arm|.*?_386') },
+      filename: '[name].js',
+      library: { type: 'amd' },
+      path: path.resolve(process.cwd(), DIST_DIR),
+      publicPath: 'public/plugins/\${(await import(\`../../src/plugin.json\`)).default.id}/',
+    },
+    plugins: [
+      new CopyWebpackPlugin({
+        patterns: [
+          { from: 'plugin.json', to: '.' },
+          { from: 'img/**/*', to: '.', noErrorOnMissing: true },
+          { from: '../README.md', to: '.', force: true, noErrorOnMissing: true },
+        ],
+      }),
+      new ForkTsCheckerWebpackPlugin({
+        async: Boolean(env.development),
+          typescript: {
+            configFile: path.join(process.cwd(), 'tsconfig.json'),
+            mode: 'write-references',
+            diagnosticOptions: {
+            semantic: true,
+            syntactic: true,
+          },
+        },
+      }),
+      ...(isProduction ? [] : [new LiveReloadPlugin()]),
+    ],
+    resolve: {
+      extensions: ['.js', '.jsx', '.ts', '.tsx'],
+      unsafeCache: true,
+    },
+    optimization: {
+      minimize: isProduction,
+      minimizer: [new TerserPlugin({ extractComments: false })],
+    },
+  };
+};
+
+export default config;
+`;
+}
+
+export function generateWebpackConstants() {
+  return `export const SOURCE_DIR = 'src';
+export const DIST_DIR = 'dist';
+`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  docker-compose for local Grafana with plugin mounted              */
+/* ------------------------------------------------------------------ */
+
+export function generateDockerCompose(appName: string) {
+  const pluginId = toPluginId(appName);
+  return `version: '3.0'
+
+services:
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - 3000:3000
+    volumes:
+      - ./dist:/var/lib/grafana/plugins/${pluginId}
+      - ./provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_DEFAULT_APP_MODE=development
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=${pluginId}
+`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  provisioning.yaml to auto-load the plugin in local Grafana         */
+/* ------------------------------------------------------------------ */
+
+export function generatePluginsYaml(appName: string) {
+    const pluginId = toPluginId(appName);
+    return `apiVersion: 1
+apps:
+  - type: ${pluginId}
 `;
 }
