@@ -90,6 +90,7 @@ export async function generateScenesApp({ inputDir, outputDir, appName, recursiv
 
   // Local Grafana via docker-compose
   await fs.writeFile(path.join(outputDir, 'docker-compose.yaml'), generateDockerCompose(appName));
+  await fs.ensureDir(path.join(outputDir, 'provisioning', 'plugins'));
   await fs.writeFile(path.join(outputDir, 'provisioning', 'plugins', 'plugins.yaml'), generatePluginsYaml(appName));
 
   // README with instructions
