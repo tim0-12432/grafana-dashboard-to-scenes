@@ -26,7 +26,7 @@
   },
   "license": "MIT",
   "bin": {
-    "dashboards-to-scenes": "./dist/cli.js"
+    "dashboards-to-scenes": "dist/cli.js"
   },
   "type": "module",
   "files": [
