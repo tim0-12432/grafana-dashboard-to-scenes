@@ -1,6 +1,6 @@
 {
   "name": "@tim0_12432/grafana-dashboard-to-scenes",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "description": "Generate a single Grafana Scenes app from a directory of Grafana dashboard YAML/JSON files",
   "keywords": [

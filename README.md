@@ -9,9 +9,7 @@
 ## Getting Started
 
 ```bash
-npm install -g grafana-dashboard-to-scenes
-
-dashboards-to-scenes -i ./dashboards -o ./scenes-app
+npx @tim0_12432/grafana-dashboard-to-scenes -i ./dashboards -o ./scenes-app
 ```
 
 ### Additional Parameters
