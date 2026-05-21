@@ -14,6 +14,8 @@ program
   .option('-o, --output <dir>', 'Output directory', './scenes-app')
   .option('-n, --name <name>', 'App name', 'my-scenes-app')
   .option('-r, --recursive', 'Recurse into subdirectories', false)
+  .option('-s, --css <file>', 'Path to a custom CSS file to inject into the app')
+  .option('-c, --colors <file>', 'Path to a JSON file with color mappings, e.g. {"green":"#00ff00","red":"#ff0000"}')
   .action(async (options) => {
     try {
       console.log(chalk.blue('🔧 Generating Grafana Scenes app...'));
@@ -22,6 +24,8 @@ program
         outputDir: path.resolve(options.output),
         appName: options.name,
         recursive: !!options.recursive,
+        cssFile: options.css,
+        colorsFile: options.colors,
       });
       console.log(
         chalk.green(

@@ -18,7 +18,17 @@ import {
 import type { DashboardFile } from './types.js';
 import { toPluginIdFromAppName } from './util.js';
 
-export async function generateScenesApp({ inputDir, outputDir, appName, recursive }: { inputDir: string, outputDir: string, appName: string, recursive: boolean }) {
+export async function generateScenesApp({ inputDir, outputDir, appName, recursive, cssFile, colorsFile }: { inputDir: string, outputDir: string, appName: string, recursive: boolean, cssFile?: string, colorsFile?: string }) {
+  let customCss: string | undefined;
+  if (cssFile) {
+    customCss = await fs.readFile(path.resolve(cssFile), 'utf8');
+  }
+
+  let colorMap: Record<string, string> | undefined;
+  if (colorsFile) {
+    colorMap = JSON.parse(await fs.readFile(path.resolve(colorsFile), 'utf8'));
+  }
+  
   const stat = await fs.stat(inputDir).catch(() => null);
   if (!stat || !stat.isDirectory()) {
     throw new Error(`Input must be an existing directory: ${inputDir}`);
@@ -67,12 +77,12 @@ export async function generateScenesApp({ inputDir, outputDir, appName, recursiv
   // Per-dashboard scene files
   for (const d of dashboards) {
     const filePath = path.join(outputDir, 'src', 'dashboards', `${d.slug}.ts`);
-    await fs.writeFile(filePath, generateSceneFile(d));
+    await fs.writeFile(filePath, generateSceneFile(d, colorMap));
   }
 
   // Plugin entry + manifest
   await fs.writeFile(path.join(outputDir, 'src', 'sceneApp.ts'), generateAppFile(dashboards));
-  await fs.writeFile(path.join(outputDir, 'src', 'module.tsx'), generateModuleTsx());
+  await fs.writeFile(path.join(outputDir, 'src', 'module.tsx'), generateModuleTsx(!!customCss));
   await fs.writeFile(path.join(outputDir, 'src', 'plugin.json'), generatePluginJson(appName, dashboards));
 
   // Logo placeholder
@@ -92,6 +102,11 @@ export async function generateScenesApp({ inputDir, outputDir, appName, recursiv
   await fs.writeFile(path.join(outputDir, 'docker-compose.yaml'), generateDockerCompose(appName));
   await fs.ensureDir(path.join(outputDir, 'provisioning', 'plugins'));
   await fs.writeFile(path.join(outputDir, 'provisioning', 'plugins', 'plugins.yaml'), generatePluginsYaml(appName));
+
+  // Custom CSS
+  if (customCss) {
+    await fs.writeFile(path.join(outputDir, 'src', 'styles.css'), customCss);
+  }
 
   // README with instructions
   await fs.writeFile(

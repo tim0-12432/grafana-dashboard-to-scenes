@@ -1,4 +1,4 @@
-import { jsLiteral, toIdent } from './util.js';
+import { applyColorMap, jsLiteral, toIdent } from './util.js';
 import type { DashboardFile, DashboardVariable, DashboardAnnotation, DashboardPanel } from './types.js';
 
 type VizPanelOpts = {
@@ -170,7 +170,7 @@ function genAnnotations(annotations: DashboardAnnotation[]) {
 /*  Panel code generation                                             */
 /* ------------------------------------------------------------------ */
 
-function genPanel(p: DashboardPanel, idx: number) {
+function genPanel(p: DashboardPanel, idx: number, colorMap?: Record<string, string>) {
   const pluginId = mapPanelType(p.type);
 
   const queries = (p.targets || []).map((t, i) => {
@@ -199,8 +199,8 @@ function genPanel(p: DashboardPanel, idx: number) {
     description: p.description || undefined,
     pluginId,
     pluginVersion: p.pluginVersion,
-    options: p.options || {},
-    fieldConfig: p.fieldConfig || { defaults: {}, overrides: [] },
+    options: applyColorMap(p.options || {}, colorMap),
+    fieldConfig: applyColorMap(p.fieldConfig || { defaults: {}, overrides: [] }, colorMap),
     displayMode: p.transparent ? 'transparent' : undefined,
     hoverHeader: undefined,
     links: p.links || undefined,
@@ -224,8 +224,8 @@ function genPanel(p: DashboardPanel, idx: number) {
 /*  Scene file per dashboard                                          */
 /* ------------------------------------------------------------------ */
 
-export function generateSceneFile(dashboard: DashboardFile) {
-  const panelEntries = dashboard.panels.map((p, idx) => genPanel(p, idx));
+export function generateSceneFile(dashboard: DashboardFile, colorMap?: Record<string, string>) {
+  const panelEntries = dashboard.panels.map((p, idx) => genPanel(p, idx, colorMap));
 
   const panelDeclarations = panelEntries.map((e) => '  ' + e.panelCode).join('\n\n');
 
@@ -371,10 +371,10 @@ export function getSceneApp() {
 /*  Grafana App Plugin entry — module.tsx                             */
 /* ------------------------------------------------------------------ */
 
-export function generateModuleTsx() {
+export function generateModuleTsx(hasCustomCss: boolean) {
   return `import React from 'react';
 import { AppPlugin, type AppRootProps } from '@grafana/data';
-import { getSceneApp } from './sceneApp';
+import { getSceneApp } from './sceneApp';${hasCustomCss ? `\nimport './styles.css';` : ''}
 
 const RootPage = (_props: AppRootProps) => {
   const app = getSceneApp();
@@ -493,7 +493,9 @@ export function generatePackageJson(appName: string) {
         '@types/react-dom': '^18.2.0',
         '@types/webpack-livereload-plugin': '^2.3.6',
         'copy-webpack-plugin': '^12.0.0',
+        'css-loader': '^7.1.4',
         'fork-ts-checker-webpack-plugin': '^9.0.0',
+        'style-loader': '^4.0.0',
         'swc-loader': '^0.2.6',
         'terser-webpack-plugin': '^5.3.10',
         'ts-node': '^10.9.2',

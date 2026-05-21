@@ -31,3 +31,13 @@ export function toPluginIdFromAppName(name: string) {
   const safe = name.toLowerCase().replace(/[^a-z0-9]+/g, '');
   return `${safe || 'myorg'}-app`;
 }
+
+export function applyColorMap<T>(obj: T, colorMap?: Record<string, string>): T {
+  if (!colorMap) return obj;
+  const json = JSON.stringify(obj);
+  const replaced = json.replace(
+    /"(green|red|yellow|blue|purple|orange|semi-dark-[a-z]+|dark-[a-z]+|light-[a-z]+|super-light-[a-z]+)"/g,
+    (match, color) => (colorMap[color] ? `"${colorMap[color]}"` : match)
+  );
+  return JSON.parse(replaced);
+}
