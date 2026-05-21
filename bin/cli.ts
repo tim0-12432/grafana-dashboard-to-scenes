@@ -3,13 +3,14 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import path from 'path';
 import { generateScenesApp } from '../src/index.js';
+import { version } from '../package.json';
 
 const program = new Command();
 
 program
   .name('dashboards-to-scenes')
   .description('Generate a single Grafana Scenes app from a directory of dashboard YAML/JSON files')
-  .version('0.2.0')
+  .version(version)
   .requiredOption('-i, --input <dir>', 'Input directory containing dashboard YAML/JSON files')
   .option('-o, --output <dir>', 'Output directory', './scenes-app')
   .option('-n, --name <name>', 'App name', 'my-scenes-app')
