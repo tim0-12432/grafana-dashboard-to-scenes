@@ -1,11 +1,39 @@
 {
-  "name": "grafana-dashboard-to-scenes",
+  "name": "@tim0_12432/grafana-dashboard-to-scenes",
   "version": "1.0.0",
+  "private": false,
   "description": "Generate a single Grafana Scenes app from a directory of Grafana dashboard YAML/JSON files",
+  "keywords": [
+    "Grafana",
+    "Grafana Scenes",
+    "Dashboards",
+    "CLI",
+    "Grafana Converter"
+  ],
+  "author": {
+    "name": "Tim0_12432",
+    "url": "https://github.com/tim0-12432"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tim0-12432/grafana-dashboard-to-scenes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tim0-12432/grafana-dashboard-to-scenes/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
   "bin": {
     "dashboards-to-scenes": "./dist/cli.js"
   },
   "type": "module",
+  "files": [
+    "dist",
+    "LICENSE.md",
+    "README.md"
+  ],
   "scripts": {
     "start": "tsx bin/cli.ts",
     "build": "tsup bin/cli.ts --format esm --out-dir dist --minify"
@@ -16,7 +44,6 @@
     "fs-extra": "^11.2.0",
     "js-yaml": "^4.1.0"
   },
-  "license": "MIT",
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/js-yaml": "^4.0.9",
