@@ -1,5 +1,6 @@
-import { applyColorMap, jsLiteral, toIdent } from './util.js';
+import { applyColorMap, jsLiteral, rawCode, toIdent } from './util.js';
 import type { DashboardFile, DashboardVariable, DashboardAnnotation, DashboardPanel } from './types.js';
+import { normalizeThresholds } from './normalization.js';
 
 type VizPanelOpts = {
     title: string,
@@ -157,7 +158,7 @@ function genAnnotations(annotations: DashboardAnnotation[]) {
         builtIn: a.builtIn,
         type: a.type,
       },
-    })})`
+    })} as any)`
   );
   return `new SceneDataLayerSet({
     layers: [
@@ -185,7 +186,7 @@ function genPanel(p: DashboardPanel, idx: number, colorMap?: Record<string, stri
     maxDataPoints: p.maxDataPoints,
     minInterval: p.interval,
     cacheTimeout: p.cacheTimeout,
-  })})`;
+  })} as any)`;
 
   const dataExpr = p.transformations && p.transformations.length
     ? `new SceneDataTransformer({
@@ -199,8 +200,10 @@ function genPanel(p: DashboardPanel, idx: number, colorMap?: Record<string, stri
     description: p.description || undefined,
     pluginId,
     pluginVersion: p.pluginVersion,
-    options: applyColorMap(p.options || {}, colorMap),
-    fieldConfig: applyColorMap(p.fieldConfig || { defaults: {}, overrides: [] }, colorMap),
+    options: normalizeThresholds(applyColorMap(p.options || {}, colorMap)),
+    fieldConfig: normalizeThresholds(
+      applyColorMap(p.fieldConfig || { defaults: {}, overrides: [] }, colorMap),
+    ),
     displayMode: p.transparent ? 'transparent' : undefined,
     hoverHeader: undefined,
     links: p.links || undefined,
@@ -215,7 +218,7 @@ function genPanel(p: DashboardPanel, idx: number, colorMap?: Record<string, stri
   const panelCode = `const ${panelVar} = new VizPanel({
     ...${jsLiteral(vizPanelOpts)},
     $data: ${dataExpr},
-  });`;
+  } as any);`;
 
   return { panelVar, panelCode, gridPos: p.gridPos };
 }
@@ -270,6 +273,7 @@ import {
   AdHocFiltersVariable,
   VariableValueSelectors,
 } from '@grafana/scenes';
+import { ThresholdsMode, MappingType, SpecialValueMatch } from '@grafana/schema';
 
 export function getScene() {
 ${panelDeclarations}

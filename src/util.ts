@@ -23,8 +23,28 @@ export function pascalCase(str: string) {
 
 // Stringify a JS value into source code (objects/arrays/primitives only).
 // We just use JSON.stringify since everything from a dashboard is JSON-safe.
-export function jsLiteral(value: unknown, indent: number = 2) {
-  return JSON.stringify(value, null, indent);
+export function jsLiteral(value: unknown): string {
+  if (value === undefined) return 'undefined';
+  if (value === null) return 'null';
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+
+  if (Array.isArray(value)) {
+    return '[' + value.map(jsLiteral).join(', ') + ']';
+  }
+
+  if (typeof value === 'object') {
+    // Raw-code marker — emit the string as JS, unquoted.
+    if ('__raw__' in (value as any) && typeof (value as any).__raw__ === 'string') {
+      return (value as any).__raw__;
+    }
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${JSON.stringify(k)}: ${jsLiteral(v)}`);
+    return '{' + entries.join(', ') + '}';
+  }
+
+  return JSON.stringify(value);
 }
 
 export function toPluginIdFromAppName(name: string) {
@@ -40,4 +60,10 @@ export function applyColorMap<T>(obj: T, colorMap?: Record<string, string>): T {
     (match, color) => (colorMap[color] ? `"${colorMap[color]}"` : match)
   );
   return JSON.parse(replaced);
+}
+
+// Sentinel wrapper so jsLiteral can emit raw code (not a quoted string).
+// Requires jsLiteral to recognize this marker — see util.ts change below.
+export function rawCode(code: string) {
+  return { __raw__: code };
 }
