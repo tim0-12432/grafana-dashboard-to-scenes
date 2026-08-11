@@ -1,0 +1,11 @@
+minimumReleaseAge: 20160
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - 'chokidar@4.0.3'
+registries:
+  default: https://registry.npmjs.org/
+blockExoticSubdeps: true
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - js-yaml@4.3.1

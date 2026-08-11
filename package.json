@@ -1,6 +1,6 @@
 {
   "name": "@tim0_12432/grafana-dashboard-to-scenes",
-  "version": "1.1.0",
+  "version": "9.9.9",
   "private": false,
   "description": "Generate a single Grafana Scenes app from a directory of Grafana dashboard YAML/JSON files",
   "keywords": [
@@ -39,17 +39,25 @@
     "build": "tsup bin/cli.ts --format esm --out-dir dist --minify"
   },
   "dependencies": {
-    "chalk": "^5.3.0",
-    "commander": "^11.1.0",
-    "fs-extra": "^11.2.0",
-    "js-yaml": "^4.1.0"
+    "chalk": "5.3.0",
+    "commander": "11.1.0",
+    "fs-extra": "11.4.0",
+    "js-yaml": "4.3.1"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.9.0",
-    "tsup": "^8.5.1",
-    "tsx": "^4.22.3",
-    "typescript": "^6.0.3"
+    "@types/fs-extra": "11.0.4",
+    "@types/js-yaml": "4.0.9",
+    "@types/node": "25.9.0",
+    "tsup": "8.5.1",
+    "tsx": "4.22.3",
+    "typescript": "6.0.3"
+  },
+  "packageManager": "pnpm@11.21.0",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^22.0.0",
+      "onFail": "download"
+    }
   }
 }

@@ -1,0 +1,46 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install Node.js and pnpm
+        uses: pnpm/setup@v2
+      - name: Get version from tag
+        id: get_version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+          VERSION="${BASH_REMATCH[1]}"
+          else
+          VERSION="${VERSION%%-*}"  # Remove everything after '-'
+          VERSION="${VERSION%%.*}"  # Remove everything after first '.'
+          fi
+          echo "Extracted version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Set package version
+        run: pnpm version ${{ steps.get_version.outputs.version }} --no-git-tag-version --no-git-checks
+      - name: Build package
+        run: pnpm build
+      - name: Publish package
+        run: pnpm publish --provenance --access public --no-git-checks
+      - name: Release package
+        uses: softprops/action-gh-release@v3
+        with:
+          body: |
+            **Download here**:
+            - https://www.npmjs.com/package/@tim0_12432/grafana-dashboard-to-scenes/v/${{ steps.get_version.outputs.version }}
+
+          generate_release_notes: true
+          make_latest: true
